@@ -70,5 +70,12 @@
     },
     "uniStatistics" : {
         "enable" : false
+    },
+    "h5" : {
+        "title" : "蓝牙设备管理",
+        "devServer" : {
+            "port" : 61102,
+            "disableHostCheck" : true
+        }
     }
 }
