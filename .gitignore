@@ -1,0 +1,8 @@
+node_modules/
+.hbuilderx/
+unpackage/dist/
+unpackage/cache/
+unpackage/debug/
+.DS_Store
+*.log
+Thumbs.db
