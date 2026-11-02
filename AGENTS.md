@@ -42,14 +42,22 @@ npm run dev -- --port 8080
 
 ## 3. 端口持久化方案说明
 
-本项目将开发服务器默认端口从 Vite 默认的 `5173` 改为 **`61102`**，并通过以下**三重机制**实现了永久持久化：
+本项目将开发服务器默认端口从 Vite 默认的 `5173` 改为 **`61102`**，持久化机制如下：
 
-1. **`manifest.json`（uni-app 规范）**：
-   在 `manifest.json` 的 `h5.devServer` 节点持久化配置了 `"port": 61102`，任何符合 uni-app 规范的编译器在构建 H5 时都会首选读取此端口。
-2. **`vite.config.js`（Vite 规范）**：
-   在根目录配置 `server: { port: 61102, host: '0.0.0.0', strictPort: true }`，确保 Vite 命令行工具链默认固定为 61102，并在端口被占用时报错而不是静默随机顺延。
-3. **`scripts/dev.js`（CLI 启动脚本）**：
-   默认参数兜底 `const port = process.env.PORT || '61102'`，支持通过 CLI 参数或环境变量灵活覆盖。
+1. **`manifest.json`（DCloud 官方标准规范）**：
+   在 `manifest.json` 中配置了：
+   ```json
+   "h5": {
+     "title": "蓝牙设备管理",
+     "devServer": {
+       "port": 61102,
+       "disableHostCheck": true
+     }
+   }
+   ```
+   无论是 HBuilderX 界面点击运行还是底层 Vite CLI 构建，编译器都会首选加载并持久化此端口。
+2. **`scripts/dev.js`（CLI 跨平台启动器）**：
+   默认兜底指定 `--port 61102`，同时也支持通过命令行参数（如 `--port 8080`）或环境变量临时覆盖。
 
 ---
 
