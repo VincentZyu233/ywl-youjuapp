@@ -1,5 +1,6 @@
 node_modules/
 .hbuilderx/
+dist/
 unpackage/dist/
 unpackage/cache/
 unpackage/debug/
