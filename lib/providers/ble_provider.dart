@@ -1,7 +1,8 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:flutter_blue_plus/flutter_blue_plus.dart';
-import '../services/ble_service.dart';
+import 'package:fluttertoast/fluttertoast.dart';
+import 'package:permission_handler/permission_handler.dart';
+import '../services/unified_bluetooth_service.dart';
 
 enum DeviceConnectionState {
   disconnected,
@@ -10,113 +11,139 @@ enum DeviceConnectionState {
 }
 
 class BleProvider extends ChangeNotifier {
-  final BleService _bleService = BleService();
+  final UnifiedBluetoothService _service = UnifiedBluetoothService();
 
-  BluetoothAdapterState _adapterState = BluetoothAdapterState.unknown;
   bool _isScanning = false;
-  final Map<String, DiscoveredDevice> _devicesMap = {};
+  List<UnifiedDevice> _devices = [];
   DeviceConnectionState _connectionState = DeviceConnectionState.disconnected;
-  String? _connectedDeviceId;
+  UnifiedDevice? _connectedDevice;
+  final List<String> _communicationLogs = [];
 
-  StreamSubscription? _adapterSub;
-  StreamSubscription? _scanSub;
-  StreamSubscription? _scanningStateSub;
+  StreamSubscription? _deviceSub;
+  StreamSubscription? _stateSub;
+  StreamSubscription? _logSub;
 
-  BluetoothAdapterState get adapterState => _adapterState;
-  bool get isBluetoothOn => _adapterState == BluetoothAdapterState.on;
   bool get isScanning => _isScanning;
-  List<DiscoveredDevice> get devices => _devicesMap.values.toList();
+  List<UnifiedDevice> get devices => _devices;
   DeviceConnectionState get connectionState => _connectionState;
-  String? get connectedDeviceId => _connectedDeviceId;
+  bool get isConnected => _connectionState == DeviceConnectionState.connected;
+  UnifiedDevice? get connectedDevice => _connectedDevice;
+  String? get connectedDeviceId => _connectedDevice?.id;
+  List<String> get logs => List.unmodifiable(_communicationLogs);
 
   BleProvider() {
     _init();
   }
 
   void _init() {
-    _adapterSub = _bleService.adapterStateStream.listen((state) {
-      _adapterState = state;
-      if (state != BluetoothAdapterState.on) {
-        _devicesMap.clear();
-        _isScanning = false;
+    _deviceSub = _service.devicesStream.listen((devList) {
+      _devices = devList;
+      notifyListeners();
+    });
+
+    _stateSub = _service.connectionStateStream.listen((stateStr) {
+      if (stateStr == 'connected') {
+        _connectionState = DeviceConnectionState.connected;
+        _connectedDevice = _service.connectedDevice;
+      } else if (stateStr == 'connecting') {
+        _connectionState = DeviceConnectionState.connecting;
+      } else {
+        _connectionState = DeviceConnectionState.disconnected;
+        _connectedDevice = null;
       }
       notifyListeners();
     });
 
-    _scanningStateSub = _bleService.isScanningStream.listen((scanning) {
-      _isScanning = scanning;
-      notifyListeners();
-    });
-
-    _scanSub = _bleService.scanResultsStream.listen((results) {
-      for (final r in results) {
-        final name = r.advertisementData.advName.isNotEmpty 
-            ? r.advertisementData.advName 
-            : r.device.platformName;
-
-        // 过滤空名称与未知设备
-        if (name.isNotEmpty && name.toLowerCase() != 'unknown') {
-          final id = r.device.remoteId.str;
-          _devicesMap[id] = DiscoveredDevice(
-            device: r.device,
-            name: name,
-            id: id,
-            rssi: r.rssi,
-          );
-        }
+    _logSub = _service.rawLogStream.listen((log) {
+      _communicationLogs.add('${DateTime.now().toString().substring(11, 19)} $log');
+      if (_communicationLogs.length > 200) {
+        _communicationLogs.removeAt(0);
       }
       notifyListeners();
     });
+
+    // 默认启动时加载已配对设备
+    _service.loadBondedDevices();
   }
 
-  Future<void> toggleBluetooth() async {
-    if (isBluetoothOn) {
-      await stopScan();
-      // Android 系统出于隐私和安全规范，应用无法直接关闭系统全局蓝牙，但可提示或断开
-    } else {
-      await _bleService.turnOnBluetooth();
-    }
+  Future<bool> checkAndRequestPermissions() async {
+    Map<Permission, PermissionStatus> statuses = await [
+      Permission.bluetooth,
+      Permission.bluetoothScan,
+      Permission.bluetoothConnect,
+      Permission.location,
+    ].request();
+
+    bool allGranted = true;
+    statuses.forEach((key, status) {
+      if (status.isPermanentlyDenied) {
+        allGranted = false;
+      }
+    });
+    return allGranted;
   }
 
   Future<void> startScan() async {
     if (_isScanning) return;
-    _devicesMap.clear();
+    await checkAndRequestPermissions();
+
+    _isScanning = true;
     notifyListeners();
-    await _bleService.startScan();
+
+    try {
+      await _service.startScan();
+    } catch (e) {
+      Fluttertoast.showToast(msg: "启动扫描失败: $e");
+    }
+
+    // 经典蓝牙扫描一般 12 秒左右，设置 15 秒后自动停止扫描状态
+    Future.delayed(const Duration(seconds: 15), () {
+      if (_isScanning) {
+        stopScan();
+      }
+    });
   }
 
   Future<void> stopScan() async {
-    await _bleService.stopScan();
+    _isScanning = false;
+    notifyListeners();
+    await _service.stopScan();
   }
 
-  Future<bool> connect(DiscoveredDevice discovered) async {
+  Future<bool> connect(UnifiedDevice device) async {
     _connectionState = DeviceConnectionState.connecting;
-    _connectedDeviceId = discovered.id;
+    _connectedDevice = device;
     notifyListeners();
 
-    final success = await _bleService.connectDevice(discovered.device);
-    if (success) {
-      _connectionState = DeviceConnectionState.connected;
-    } else {
+    final success = await _service.connect(device);
+    if (!success) {
       _connectionState = DeviceConnectionState.disconnected;
-      _connectedDeviceId = null;
+      _connectedDevice = null;
+      Fluttertoast.showToast(msg: "连接失败，请确认设备已通电并处于范围内");
+    } else {
+      Fluttertoast.showToast(msg: "已连接到 ${device.displayName}");
     }
     notifyListeners();
     return success;
   }
 
   Future<void> disconnect() async {
-    await _bleService.disconnectDevice();
+    await _service.disconnect();
     _connectionState = DeviceConnectionState.disconnected;
-    _connectedDeviceId = null;
+    _connectedDevice = null;
+    notifyListeners();
+  }
+
+  void clearLogs() {
+    _communicationLogs.clear();
     notifyListeners();
   }
 
   @override
   void dispose() {
-    _adapterSub?.cancel();
-    _scanSub?.cancel();
-    _scanningStateSub?.cancel();
+    _deviceSub?.cancel();
+    _stateSub?.cancel();
+    _logSub?.cancel();
     super.dispose();
   }
 }
