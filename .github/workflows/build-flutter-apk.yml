@@ -30,6 +30,12 @@ jobs:
       - name: Get dependencies
         run: flutter pub get
 
+      - name: Prepare Signing Keystore
+        run: |
+          mkdir -p android/app
+          cp youjuapp.keystore android/app/youjuapp.keystore
+          ls -lh android/app/youjuapp.keystore
+
       - name: Build Android Release APK
         run: |
           echo "Building signed Release APK with version 2.0.0+2000..."
