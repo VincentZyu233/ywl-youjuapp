@@ -6,6 +6,9 @@
   "platform": "android",
   "android": {
     "packagename": "com.youju.tcuapp",
-    "certType": "public"
+    "certalias": "youjuapp",
+    "certfile": "youjuapp.keystore",
+    "certpassword": "youjuapp2026",
+    "storepassword": "youjuapp2026"
   }
 }
