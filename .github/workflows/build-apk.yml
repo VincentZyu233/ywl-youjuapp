@@ -34,6 +34,9 @@ jobs:
         with:
           python-version: '3.11'
 
+      - name: Install Python AXML Tool
+        run: pip install pyaxml
+
       - name: Setup Android Build Tools
         run: |
           BUILD_TOOLS_DIR=$(ls -d $ANDROID_HOME/build-tools/* | sort -V | tail -n 1)
@@ -102,12 +105,17 @@ jobs:
           if [ -n "$RES_DIR" ] && [ -f "$BASE_APK" ]; then
             echo "Found resources at $RES_DIR and base APK at $BASE_APK"
             echo "Running fast offline APK repack & sign pipeline..."
+            VERSION=$(node -e "console.log(require('./package.json').version)")
+            VERSION_CODE=$(node -e "try { const m = JSON.parse(require('fs').readFileSync('manifest.json','utf8')); console.log(m['app-plus']?.distribute?.google?.versionCode || m.versionCode || 1014); } catch(e) { console.log(1014); }")
+            echo "Injecting Android version: $VERSION (code: $VERSION_CODE)"
             python3 scripts/build-offline.py \
               --base-apk "$BASE_APK" \
               --resource-dir "$RES_DIR" \
               --keystore youjuapp.keystore \
               --alias youjuapp \
               --password youjuapp2026 \
+              --version-name "$VERSION" \
+              --version-code "$VERSION_CODE" \
               --output unpackage/release/apk/youjuAPP.apk
           else
             echo "Falling back to standard cloud pack..."
