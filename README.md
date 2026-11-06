@@ -4,3 +4,5 @@
 [![Gitee](https://img.shields.io/badge/Gitee-vincent--zyu%2Fywl--youjuapp-C71D23?logo=gitee)](https://gitee.com/vincent-zyu/ywl-youjuapp)
 
 太阳能智能跟踪支架控制器（TCU）移动端蓝牙管理应用。
+
+<p align="center"><img src="docs/images/preview/preview.jpg" width="320" alt="App Preview" /></p>
