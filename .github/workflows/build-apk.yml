@@ -147,6 +147,7 @@ jobs:
           TAG="v$VERSION"
           echo "Target Release Tag: $TAG"
 
+          RELEASE_NOTES="自动化流水线构建正式版 APK (版本 $VERSION) - 修复设备列表平滑滚动与吸底按钮，升级离线打包"
           # 检查标签是否已存在，若存在则更新资产，若不存在则创建
           if gh release view "$TAG" -R ${{ github.repository }} >/dev/null 2>&1; then
             echo "Release $TAG exists, uploading asset..."
@@ -155,10 +156,6 @@ jobs:
             echo "Creating new release $TAG..."
             gh release create "$TAG" unpackage/release/apk/youjuAPP.apk \
               --title "youjuAPP Build $TAG" \
-              --notes "自动化流水线构建正式版 APK (版本 $VERSION)
-- 修复首页设备列表在长列表下的平滑滚动锁定
-- 修复底部操作按钮漂移，实现安全区吸底固定
-- 完善蓝牙设备连接与状态管理
-- 纯 GitHub CI 离线原生签名与自动化发布" \
+              --notes "$RELEASE_NOTES" \
               -R ${{ github.repository }}
           fi
