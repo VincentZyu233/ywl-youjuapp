@@ -1,0 +1,78 @@
+name: Build Android APK & Release
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: 'Release Tag (e.g. v1.0.0)'
+        required: false
+        default: 'v1.0.0'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Download & Setup HBuilderX Linux CLI
+        run: |
+          echo "Downloading HBuilderX CLI..."
+          curl -sSL -o hx.tar.gz https://download.dcloud.net.cn/HBuilderX.linux_x64.full.tar.gz
+          tar -zxf hx.tar.gz
+          echo "$(pwd)/HBuilderX" >> $GITHUB_PATH
+
+      - name: Start HBuilderX & Login
+        env:
+          DCLOUD_USER: ${{ secrets.DCLOUD_USERNAME }}
+          DCLOUD_PASS: ${{ secrets.DCLOUD_PASSWORD }}
+        run: |
+          ./HBuilderX/cli open
+          if [ -n "$DCLOUD_USER" ] && [ -n "$DCLOUD_PASS" ]; then
+            echo "Logging into DCloud account..."
+            ./HBuilderX/cli user login --username "$DCLOUD_USER" --password "$DCLOUD_PASS"
+          else
+            echo "Warning: DCLOUD_USERNAME or DCLOUD_PASSWORD secret is not configured!"
+          fi
+
+      - name: Submit & Build APK
+        run: |
+          ./HBuilderX/cli project open --path "$(pwd)"
+          ./HBuilderX/cli pack --config pack.json
+
+      - name: Upload APK to Artifacts
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: youjuAPP-apk
+          path: |
+            unpackage/release/apk/*.apk
+            dist/**/*.apk
+
+      - name: Publish to GitHub Release
+        if: success()
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event.inputs.release_tag || format('v1.0.{0}', github.run_number) }}
+          name: ${{ format('youjuAPP Build #{0}', github.run_number) }}
+          draft: false
+          prerelease: false
+          files: |
+            unpackage/release/apk/*.apk
+            dist/**/*.apk
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

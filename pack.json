@@ -1,0 +1,8 @@
+{
+  "name": "youjuAPP",
+  "appid": "__UNI__D46060B",
+  "type": "android",
+  "android": {
+    "certType": "public"
+  }
+}
