@@ -117,6 +117,16 @@ class BluetoothSppPlugin(private val context: Context, messenger: BinaryMessenge
                         deviceSink?.success(discoveredDevices.values.toList())
                     }
                 }
+                BluetoothAdapter.ACTION_STATE_CHANGED -> {
+                    val state = intent.getIntExtra(BluetoothAdapter.EXTRA_STATE, BluetoothAdapter.ERROR)
+                    mainHandler.post {
+                        if (state == BluetoothAdapter.STATE_ON) {
+                            stateSink?.success("adapter_on")
+                        } else if (state == BluetoothAdapter.STATE_OFF) {
+                            stateSink?.success("adapter_off")
+                        }
+                    }
+                }
             }
         }
     }
@@ -128,6 +138,9 @@ class BluetoothSppPlugin(private val context: Context, messenger: BinaryMessenge
             }
             "isEnabled" -> {
                 result.success(bluetoothAdapter?.isEnabled == true)
+            }
+            "requestEnable" -> {
+                requestEnable(result)
             }
             "getBondedDevices" -> {
                 getBondedDevices(result)
@@ -161,6 +174,26 @@ class BluetoothSppPlugin(private val context: Context, messenger: BinaryMessenge
         }
     }
 
+    private fun requestEnable(result: MethodChannel.Result) {
+        if (bluetoothAdapter == null) {
+            result.error("BLUETOOTH_UNAVAILABLE", "Bluetooth is not supported", null)
+            return
+        }
+        if (bluetoothAdapter.isEnabled) {
+            result.success(true)
+            return
+        }
+        try {
+            val intent = Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            context.startActivity(intent)
+            result.success(true)
+        } catch (e: Exception) {
+            result.error("ENABLE_FAILED", e.message, null)
+        }
+    }
+
     private fun getBondedDevices(result: MethodChannel.Result) {
         if (bluetoothAdapter == null) {
             result.success(emptyList<Map<String, Any?>>())
@@ -182,6 +215,10 @@ class BluetoothSppPlugin(private val context: Context, messenger: BinaryMessenge
     private fun startDiscovery(result: MethodChannel.Result) {
         if (bluetoothAdapter == null) {
             result.error("BLUETOOTH_UNAVAILABLE", "Bluetooth not supported", null)
+            return
+        }
+        if (!bluetoothAdapter.isEnabled) {
+            result.error("BLUETOOTH_DISABLED", "Bluetooth is disabled", null)
             return
         }
 

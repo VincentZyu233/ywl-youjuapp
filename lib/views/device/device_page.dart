@@ -352,12 +352,13 @@ class _DevicePageState extends State<DevicePage> {
 
   Widget _buildNavItem(int index, IconData icon, String label) {
     final isSelected = _currentIndex == index;
-    return InkWell(
-      borderRadius: BorderRadius.circular(16),
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
       onTap: () => setState(() => _currentIndex = index),
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
+        duration: const Duration(milliseconds: 220),
+        curve: Curves.easeInOut,
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
         decoration: BoxDecoration(
           color: isSelected ? const Color(0xFFEFF6FF) : Colors.transparent,
           borderRadius: BorderRadius.circular(16),
