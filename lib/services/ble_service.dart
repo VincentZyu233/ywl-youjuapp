@@ -37,6 +37,8 @@ class BleService {
   Stream<BluetoothAdapterState> get adapterStateStream => FlutterBluePlus.adapterState;
   Stream<List<ScanResult>> get scanResultsStream => FlutterBluePlus.scanResults;
   Stream<bool> get isScanningStream => FlutterBluePlus.isScanning;
+  Stream<List<int>> get dataNotificationStream =>
+      _notifyCharacteristic?.onValueReceived ?? const Stream.empty();
 
   // 请求 Android 12+ 动态蓝牙与定位权限
   Future<bool> requestPermissions() async {

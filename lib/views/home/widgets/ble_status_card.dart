@@ -3,53 +3,43 @@ import 'package:provider/provider.dart';
 import '../../../providers/ble_provider.dart';
 
 class BleStatusCard extends StatelessWidget {
-  const BleStatusCard({super.key});
+  final VoidCallback? onOpenLogs;
+
+  const BleStatusCard({super.key, this.onOpenLogs});
 
   @override
   Widget build(BuildContext context) {
     final ble = context.watch<BleProvider>();
-    final isOn = ble.isBluetoothOn;
+    final isConnected = ble.isConnected;
+    final connectedName = ble.connectedDevice?.displayName ?? '未连接';
 
     return Container(
       decoration: const BoxDecoration(
         gradient: LinearGradient(
-          colors: [Color(0xFF2563EB), Color(0xFF4F46E5)],
+          colors: [Color(0xFF1E3A8A), Color(0xFF2563EB)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-        borderRadius: BorderRadius.vertical(bottom: Radius.circular(40)),
+        borderRadius: BorderRadius.vertical(bottom: Radius.circular(32)),
       ),
       child: Stack(
         children: [
-          // 背景微光渐变球
           Positioned(
-            top: -50,
-            right: -50,
+            top: -40,
+            right: -40,
             child: Container(
-              width: 180,
-              height: 180,
+              width: 160,
+              height: 160,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: Colors.white.withValues(alpha: 0.08),
               ),
             ),
           ),
-          Positioned(
-            bottom: -50,
-            left: -50,
-            child: Container(
-              width: 180,
-              height: 180,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: const Color(0xFF60A5FA).withValues(alpha: 0.15),
-              ),
-            ),
-          ),
           SafeArea(
             bottom: false,
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(24, 20, 24, 32),
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -58,26 +48,25 @@ class BleStatusCard extends StatelessWidget {
                       Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.18),
-                          borderRadius: BorderRadius.circular(20),
+                          color: Colors.white.withValues(alpha: 0.16),
+                          borderRadius: BorderRadius.circular(16),
                         ),
-                        child: const Icon(
-                          Icons.bluetooth,
+                        child: Icon(
+                          isConnected ? Icons.bluetooth_connected : Icons.bluetooth,
                           color: Colors.white,
-                          size: 28,
+                          size: 26,
                         ),
                       ),
-                      const SizedBox(width: 16),
+                      const SizedBox(width: 14),
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           const Text(
-                            "蓝牙连接",
+                            "光伏跟踪支架控制器",
                             style: TextStyle(
                               color: Colors.white,
-                              fontSize: 22,
+                              fontSize: 18,
                               fontWeight: FontWeight.bold,
-                              letterSpacing: -0.3,
                             ),
                           ),
                           const SizedBox(height: 4),
@@ -88,15 +77,15 @@ class BleStatusCard extends StatelessWidget {
                                 height: 8,
                                 decoration: BoxDecoration(
                                   shape: BoxShape.circle,
-                                  color: isOn ? const Color(0xFF4ADE80) : const Color(0xFF94A3B8),
+                                  color: isConnected ? const Color(0xFF4ADE80) : const Color(0xFFFACC15),
                                 ),
                               ),
-                              const SizedBox(width: 8),
+                              const SizedBox(width: 6),
                               Text(
-                                isOn ? "系统已开启并就绪" : "系统已关闭",
+                                isConnected ? "已连接: $connectedName" : "支持 JDY-31 / HC-05 串口 & BLE",
                                 style: const TextStyle(
                                   color: Color(0xFFDBEAFE),
-                                  fontSize: 13,
+                                  fontSize: 12,
                                 ),
                               ),
                             ],
@@ -105,15 +94,19 @@ class BleStatusCard extends StatelessWidget {
                       ),
                     ],
                   ),
-                  // 开关切换
-                  Switch(
-                    value: isOn,
-                    onChanged: (val) => ble.toggleBluetooth(),
-                    activeThumbColor: Colors.white,
-                    activeTrackColor: const Color(0xFF60A5FA),
-                    inactiveThumbColor: Colors.white,
-                    inactiveTrackColor: Colors.white.withValues(alpha: 0.2),
-                  ),
+                  if (onOpenLogs != null)
+                    IconButton(
+                      icon: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Icon(Icons.terminal, color: Colors.white, size: 20),
+                      ),
+                      tooltip: "通信日志",
+                      onPressed: onOpenLogs,
+                    ),
                 ],
               ),
             ),
