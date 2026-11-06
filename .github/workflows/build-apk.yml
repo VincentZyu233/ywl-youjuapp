@@ -48,7 +48,11 @@ jobs:
 
       - name: Submit & Build APK
         run: |
+          PROJECT_NAME=$(basename "$(pwd)")
+          echo "Project name is: $PROJECT_NAME"
           ./HBuilderX/cli project open --path "$(pwd)"
+          sed -i "s/\"project\": \".*\"/\"project\": \"$PROJECT_NAME\"/" pack.json
+          cat pack.json
           ./HBuilderX/cli pack --config pack.json
 
       - name: Upload APK to Artifacts
