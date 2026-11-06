@@ -1,7 +1,9 @@
 {
+  "project": ".",
   "name": "youjuAPP",
   "appid": "__UNI__D46060B",
   "type": "android",
+  "platform": "android",
   "android": {
     "certType": "public"
   }
