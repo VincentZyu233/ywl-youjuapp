@@ -1,6 +1,6 @@
 <template>
 	<view
-		:style="{ height: '100vh', backgroundColor: '#f8fafc', position: 'relative', display: 'flex', flexDirection: 'column' }">
+		:style="{ height: '100vh', backgroundColor: '#f8fafc', overflow: 'hidden', display: 'flex', flexDirection: 'column' }">
 		<!-- 顶部区域 -->
 		<view
 			:style="{ background: 'linear-gradient(to bottom, #0f172a, #1e293b)', paddingTop: '120rpx', paddingBottom: '48rpx', paddingLeft: '32rpx', paddingRight: '32rpx', flexShrink: 0, shadow: '0 4px 6px rgba(0,0,0,0.1)', zIndex: 10, borderRadius: '0 0 48rpx 48rpx', position: 'relative', overflow: 'hidden' }">
@@ -8,7 +8,7 @@
 				:style="{ position: 'absolute', inset: 0, opacity: 0.03, backgroundImage: 'radial-gradient(circle at 2px 2px, #fff 1px, transparent 0)', backgroundSize: '32rpx 32rpx' }">
 			</view>
 			<view
-				:style="{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '40rpx' }">
+				:style="{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '28rpx' }">
 				<view :style="{ padding: '16rpx', marginLeft: '-16rpx', borderRadius: '50%' }" @click="goBack">
 					<text :style="{ color: '#fff', fontSize: '48rpx' }">←</text>
 				</view>
@@ -16,6 +16,11 @@
 					<text
 						:style="{ fontSize: '24rpx', fontWeight: 'bold', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '4rpx', marginBottom: '4rpx' }">当前设备</text>
 					<text :style="{ fontWeight: 'bold', fontSize: '36rpx', color: '#fff' }">{{ deviceName }}</text>
+					<!-- 蓝牙连接状态标识 -->
+					<view :style="{ display: 'flex', alignItems: 'center', columnGap: '8rpx', marginTop: '8rpx' }" @click="reconnectDevice">
+						<view :style="{ width: '14rpx', height: '14rpx', borderRadius: '50%', backgroundColor: connectionColor }"></view>
+						<text :style="{ fontSize: '22rpx', color: connectionTextColor }">{{ connectionText }}</text>
+					</view>
 				</view>
 				<view :style="{ width: '80rpx' }"></view>
 			</view>
@@ -52,9 +57,9 @@
 			</view>
 		</view>
 
-		<!-- 内容区 -->
+		<!-- 内容区 (严格高度约束，滚动顺滑) -->
 		<scroll-view scroll-y
-			:style="{ flex: 1, paddingLeft: '32rpx', paddingRight: '32rpx', paddingTop: '48rpx', paddingBottom: '448rpx', position: 'relative', zIndex: 0, backgroundColor: '#f8fafc',boxSizing: 'border-box' }">
+			:style="{ flex: 1, height: 0, minHeight: 0, paddingLeft: '32rpx', paddingRight: '32rpx', paddingTop: '32rpx', paddingBottom: '32rpx', backgroundColor: '#f8fafc', boxSizing: 'border-box' }">
 			<!-- Info Tab -->
 			<view v-show="activeTab === 'info'"
 				:style="{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '800rpx', color: '#94a3b8', opacity: 0.6 }">
@@ -235,8 +240,10 @@
 			</view>
 		</scroll-view>
 
-		<!-- 底部导航 -->
-		<bottom-nav :active-key="activeTab" @change="switchTab"></bottom-nav>
+		<!-- 底部导航 (固定沉底) -->
+		<view :style="{ flexShrink: 0, zIndex: 30 }">
+			<bottom-nav :active-key="activeTab" @change="switchTab"></bottom-nav>
+		</view>
 	</view>
 </template>
 
@@ -244,6 +251,7 @@
 	import bottomNav from '../../components/bottom-nav.vue'
 	import settingCard from '../../components/setting-card.vue'
 	import controlButton from '../../components/control-button.vue'
+	import * as ble from '../../utils/ble.js'
 
 	export default {
 		components: {
@@ -259,6 +267,7 @@
 				currentTime: '',
 				tcuVersion: '12',
 				netStatus: '2',
+				connectionState: 'connecting', // 'connecting' | 'connected' | 'disconnected'
 				tcuVersions: ['7.1.08', '7.1.09', '8.0.01'],
 				astronomicalParams: {
 					longitude: '112.83',
@@ -282,13 +291,78 @@
 				}
 			}
 		},
+		computed: {
+			connectionColor() {
+				if (this.connectionState === 'connected') return '#4ade80'
+				if (this.connectionState === 'connecting') return '#facc15'
+				return '#f87171'
+			},
+			connectionTextColor() {
+				if (this.connectionState === 'connected') return '#86efac'
+				if (this.connectionState === 'connecting') return '#fde047'
+				return '#fca5a5'
+			},
+			connectionText() {
+				if (this.connectionState === 'connected') return '已连接'
+				if (this.connectionState === 'connecting') return '正在连接...'
+				return '连接断开 (点击重试)'
+			}
+		},
 		onLoad(options) {
 			this.deviceId = options.deviceId || ''
 			this.deviceName = options.deviceName || '未知设备'
 			this.updateTime()
-			setInterval(this.updateTime, 1000)
+			this.timeInterval = setInterval(this.updateTime, 1000)
+			if (this.deviceId) {
+				this.connectDevice()
+			}
+		},
+		onUnload() {
+			if (this.timeInterval) {
+				clearInterval(this.timeInterval)
+			}
+			if (this.deviceId) {
+				ble.closeBLEConnection(this.deviceId).catch(() => {})
+			}
 		},
 		methods: {
+			async connectDevice() {
+				this.connectionState = 'connecting'
+				uni.showLoading({
+					title: '正在连接设备...',
+					mask: true
+				})
+				try {
+					await ble.createBLEConnection(this.deviceId)
+					this.connectionState = 'connected'
+					uni.hideLoading()
+					uni.showToast({
+						title: '蓝牙连接成功',
+						icon: 'success'
+					})
+					// 探索服务
+					try {
+						const services = await ble.getBLEDeviceServices(this.deviceId)
+						console.log('发现蓝牙服务列表:', services)
+					} catch (e) {
+						console.log('探索服务异常(非致命):', e)
+					}
+				} catch (err) {
+					console.error('蓝牙连接失败:', err)
+					this.connectionState = 'disconnected'
+					uni.hideLoading()
+					uni.showToast({
+						title: '连接失败，可点击重试',
+						icon: 'none',
+						duration: 2500
+					})
+				}
+			},
+			reconnectDevice() {
+				if (this.connectionState !== 'connected') {
+					this.connectDevice()
+				}
+			},
 			goBack() {
 				uni.navigateBack()
 			},

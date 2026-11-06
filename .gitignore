@@ -5,6 +5,7 @@ unpackage/dist/
 unpackage/cache/
 unpackage/debug/
 unpackage/release/
+download/
 *.apk
 .DS_Store
 *.log

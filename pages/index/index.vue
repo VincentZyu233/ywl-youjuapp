@@ -1,6 +1,6 @@
 <template>
 	<view
-		:style="{ height: '100vh', backgroundColor: '#f8fafc', position: 'relative', display: 'flex', flexDirection: 'column' }">
+		:style="{ height: '100vh', backgroundColor: '#f8fafc', overflow: 'hidden', display: 'flex', flexDirection: 'column' }">
 		<!-- 顶部区域 -->
 		<view
 			:style="{ position: 'relative', background: 'linear-gradient(to bottom right, #2563eb, #4f46e5)', padding: '24rpx', paddingTop: '140rpx', paddingBottom: '64rpx', borderRadius: '0 0 80rpx 80rpx', overflow: 'hidden', zIndex: 10, flexShrink: 0 }">
@@ -39,9 +39,9 @@
 			</view>
 		</view>
 
-		<!-- 设备列表 -->
+		<!-- 设备列表 (可滚动区域，精准约束高度) -->
 		<scroll-view scroll-y
-			:style="{ flex: 1, padding: '0 32rpx', paddingTop: '48rpx', paddingBottom: '448rpx', position: 'relative', zIndex: 0, boxSizing: 'border-box' }">
+			:style="{ flex: 1, height: 0, minHeight: 0, padding: '0 32rpx', paddingTop: '32rpx', boxSizing: 'border-box' }">
 			<view
 				:style="{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16rpx', padding: '0 8rpx' }">
 				<text
@@ -58,18 +58,19 @@
 				<text :style="{ marginTop: '8rpx', fontSize: '24rpx' }">点击下方按钮扫描</text>
 			</view>
 
-			<view v-for="device in deviceList" :key="device.deviceId" :style="{ marginBottom: '32rpx' }">
+			<view v-for="device in deviceList" :key="device.deviceId" :style="{ marginBottom: '24rpx' }">
 				<device-card :device-name="device.name || '未知设备'" :mac-address="device.deviceId"
 					:signal-level="device.RSSI" :is-connected="connectedDeviceId === device.deviceId"
 					@click="goToDevice(device)"></device-card>
 			</view>
+			<view :style="{ height: '32rpx' }"></view>
 		</scroll-view>
 
-		<!-- 底部按钮 -->
+		<!-- 底部常驻按钮 (标准 Flex 底部固件，不遮挡、不漂移) -->
 		<view
-			:style="{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '48rpx', background: 'linear-gradient(to top, #f8fafc, #f8fafc 60%, transparent)', zIndex: 20, pointerEvents: 'none' }">
+			:style="{ flexShrink: 0, padding: '24rpx 32rpx', paddingBottom: 'calc(24rpx + env(safe-area-inset-bottom))', backgroundColor: '#f8fafc', borderTop: '1px solid #f1f5f9', zIndex: 20 }">
 			<button
-				:style="{ width: '100%', backgroundColor: '#0f172a', color: '#fff', borderRadius: '40rpx', padding: '32rpx', display: 'flex', alignItems: 'center', justifyContent: 'center', columnGap: '16rpx', fontSize: '32rpx', fontWeight: '500', boxShadow: '0 20px 40px rgba(15,23,42,0.2)', pointerEvents: 'auto' }"
+				:style="{ width: '100%', backgroundColor: '#0f172a', color: '#fff', borderRadius: '40rpx', padding: '28rpx', display: 'flex', alignItems: 'center', justifyContent: 'center', columnGap: '16rpx', fontSize: '32rpx', fontWeight: '500', boxShadow: '0 10px 25px rgba(15,23,42,0.15)' }"
 				@click="scanDevices">
 				<text
 					:style="{ fontSize: '36rpx', animation: isScanning ? 'spin 1s linear infinite' : '' }">{{ isScanning ? '⟳' : '⌕' }}</text>
