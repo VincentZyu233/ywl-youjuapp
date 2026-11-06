@@ -53,12 +53,7 @@ jobs:
         run: |
           TAG="v2.0.0"
           RELEASE_TITLE="youjuAPP Flutter 2.0.0 Release"
-          RELEASE_NOTES="youjuAPP 2.0.0 重大架构升级 (Flutter Material 3 纯原生 Android 版本)
-- 架构重构：基于 Flutter 3 + Material 3 自绘引擎，彻底解决手势冲突与滚动锁死，带来 120Hz 满帧丝滑体验
-- 现代 UI：参考 FlClash 现代高品质卡片化交互、状态胶囊徽章与沉浸底栏
-- 工业级蓝牙：接入 flutter_blue_plus，支持 Android 12+ 动态权限、毫秒级平滑 RSSI 监测与连接管理
-- 完备功能对齐：天文参数、组件参数、保护参数、东西限位角与整体控制面板（10 种群控动作）100% 具备
-- 官方永久签名：集成 youjuapp.keystore 官方签名，支持无缝覆盖升级"
+          RELEASE_NOTES="youjuAPP 2.0.0 重大架构升级 (Flutter Material 3 原生版本) - 120Hz丝滑手势、FlClash质感UI、工业级蓝牙与TCU全功能对齐"
 
           if gh release view "$TAG" -R ${{ github.repository }} >/dev/null 2>&1; then
             echo "Release $TAG exists, updating assets..."
