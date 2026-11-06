@@ -60,8 +60,15 @@ jobs:
           sed -i "s|\"certfile\": \".*\"|\"certfile\": \"$(pwd)/youjuapp.keystore\"|" pack.json
           sed -i "s/\"project\": \".*\"/\"project\": \"$PROJECT_NAME\"/" pack.json
           cat pack.json
-          # 使用 yes 自动应对多任务冲突时的交互式确认 "Do you continue to submit it? (y/n)"
-          PACK_OUTPUT=$(yes | ./HBuilderX/cli pack --config pack.json 2>&1)
+
+          # 预先清理可能卡在云端的旧排队任务，彻底消除交互确认
+          echo "Canceling any hanging packaging task in cloud queue..."
+          ./HBuilderX/cli pack cancel --project "$(pwd)" || true
+          ./HBuilderX/cli pack cancel --project "$PROJECT_NAME" || true
+          sleep 3
+
+          echo "Submitting clean cloud packaging task..."
+          PACK_OUTPUT=$(./HBuilderX/cli pack --config pack.json 2>&1)
           echo "$PACK_OUTPUT"
           if echo "$PACK_OUTPUT" | grep -q "user not login"; then
             echo "::error::User not logged in, pack failed!"
