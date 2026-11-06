@@ -6,9 +6,9 @@ on:
   workflow_dispatch:
     inputs:
       release_tag:
-        description: 'Release Tag (e.g. v1.0.0)'
+        description: 'Release Tag (leave empty for auto v1.0.X)'
         required: false
-        default: 'v1.0.0'
+        default: ''
 
 jobs:
   build:
@@ -31,8 +31,10 @@ jobs:
 
       - name: Download & Setup HBuilderX Linux CLI
         run: |
-          echo "Downloading HBuilderX CLI..."
-          curl -sSL -o hx.tar.gz https://download.dcloud.net.cn/HBuilderX.linux_x64.full.tar.gz
+          echo "Fetching latest HBuilderX download URL..."
+          HX_URL=$(curl -sSL "https://download1.dcloud.net.cn/hbuilderx/release.json" | jq -r '.files[] | select(.code=="linux_full_x64") | .path')
+          echo "Downloading from: $HX_URL"
+          curl -L -o hx.tar.gz "$HX_URL"
           tar -zxf hx.tar.gz
           echo "$(pwd)/HBuilderX" >> $GITHUB_PATH
 
@@ -46,7 +48,7 @@ jobs:
             echo "Logging into DCloud account..."
             ./HBuilderX/cli user login --username "$DCLOUD_USER" --password "$DCLOUD_PASS"
           else
-            echo "Warning: DCLOUD_USERNAME or DCLOUD_PASSWORD secret is not configured!"
+            echo "::warning::DCLOUD_USERNAME or DCLOUD_PASSWORD secret is not configured in repository settings."
           fi
 
       - name: Submit & Build APK
@@ -67,7 +69,7 @@ jobs:
         if: success()
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ github.event.inputs.release_tag || format('v1.0.{0}', github.run_number) }}
+          tag_name: ${{ github.event.inputs.release_tag != '' && github.event.inputs.release_tag || format('v1.0.{0}', github.run_number) }}
           name: ${{ format('youjuAPP Build #{0}', github.run_number) }}
           draft: false
           prerelease: false
