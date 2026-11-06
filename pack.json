@@ -5,6 +5,7 @@
   "type": "android",
   "platform": "android",
   "android": {
+    "packagename": "com.youju.tcuapp",
     "certType": "public"
   }
 }
