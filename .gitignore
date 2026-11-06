@@ -4,6 +4,8 @@ dist/
 unpackage/dist/
 unpackage/cache/
 unpackage/debug/
+unpackage/release/
+*.apk
 .DS_Store
 *.log
 Thumbs.db

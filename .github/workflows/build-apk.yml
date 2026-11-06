@@ -66,6 +66,17 @@ jobs:
             echo "::error::User not logged in, pack failed!"
             exit 1
           fi
+
+          # 提取云端编译生成的官方 APK 下载直链
+          DOWNLOAD_URL=$(echo "$PACK_OUTPUT" | grep -oE "https?://[^ ]+download[^ ]+" | head -n 1)
+          if [ -n "$DOWNLOAD_URL" ]; then
+            echo "Found APK download URL: $DOWNLOAD_URL"
+            mkdir -p unpackage/release/apk
+            curl -sSL "$DOWNLOAD_URL" -o unpackage/release/apk/youjuAPP.apk
+            echo "Downloaded cloud APK successfully. Size:"
+            ls -lh unpackage/release/apk/youjuAPP.apk
+          fi
+
           echo "Checking generated APK files:"
           find . -name "*.apk"
 
