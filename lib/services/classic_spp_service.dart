@@ -91,6 +91,15 @@ class ClassicSppService {
     }
   }
 
+  Future<bool> requestEnable() async {
+    try {
+      final bool? success = await _methodChannel.invokeMethod<bool>('requestEnable');
+      return success ?? false;
+    } catch (_) {
+      return false;
+    }
+  }
+
   Future<List<DiscoveredDevice>> getBondedDevices() async {
     try {
       final List<dynamic>? res = await _methodChannel.invokeMethod<List<dynamic>>('getBondedDevices');

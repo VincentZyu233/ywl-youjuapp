@@ -83,9 +83,29 @@ class BleProvider extends ChangeNotifier {
     return allGranted;
   }
 
+  Future<bool> checkBluetoothEnabled() async {
+    return await _service.isBluetoothEnabled();
+  }
+
+  Future<void> requestTurnOnBluetooth() async {
+    await _service.requestEnableBluetooth();
+  }
+
   Future<void> startScan() async {
     if (_isScanning) return;
-    await checkAndRequestPermissions();
+
+    final hasPerm = await checkAndRequestPermissions();
+    if (!hasPerm) {
+      Fluttertoast.showToast(msg: "请在系统设置中授予蓝牙与位置权限");
+      return;
+    }
+
+    final isEnabled = await _service.isBluetoothEnabled();
+    if (!isEnabled) {
+      Fluttertoast.showToast(msg: "蓝牙未开启，正在请求打开系统蓝牙...");
+      await _service.requestEnableBluetooth();
+      return;
+    }
 
     _isScanning = true;
     notifyListeners();
@@ -93,6 +113,8 @@ class BleProvider extends ChangeNotifier {
     try {
       await _service.startScan();
     } catch (e) {
+      _isScanning = false;
+      notifyListeners();
       Fluttertoast.showToast(msg: "启动扫描失败: $e");
     }
 

@@ -178,6 +178,14 @@ class UnifiedBluetoothService {
     _devicesController.add(list);
   }
 
+  Future<bool> isBluetoothEnabled() async {
+    return await _sppService.isBluetoothEnabled();
+  }
+
+  Future<bool> requestEnableBluetooth() async {
+    return await _sppService.requestEnable();
+  }
+
   /// 扫描前先读取系统已配对的经典蓝牙设备（如 JDY-31-SPP, HC-05 等）
   Future<void> loadBondedDevices() async {
     final bonded = await _sppService.getBondedDevices();
