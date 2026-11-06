@@ -41,9 +41,15 @@ jobs:
           ./HBuilderX/cli open
           if [ -n "$DCLOUD_USER" ] && [ -n "$DCLOUD_PASS" ]; then
             echo "Logging into DCloud account..."
-            ./HBuilderX/cli user login --username "$DCLOUD_USER" --password "$DCLOUD_PASS"
+            LOGIN_OUTPUT=$(./HBuilderX/cli user login --username "$DCLOUD_USER" --password "$DCLOUD_PASS" 2>&1)
+            echo "$LOGIN_OUTPUT"
+            if echo "$LOGIN_OUTPUT" | grep -q "FAILED"; then
+              echo "::error::DCloud login failed!"
+              exit 1
+            fi
           else
-            echo "::warning::DCLOUD_USERNAME or DCLOUD_PASSWORD secret is not configured in repository settings."
+            echo "::error::DCLOUD_USERNAME or DCLOUD_PASSWORD secret is not configured in repository settings."
+            exit 1
           fi
 
       - name: Submit & Build APK
@@ -54,7 +60,14 @@ jobs:
           sed -i "s|\"certfile\": \".*\"|\"certfile\": \"$(pwd)/youjuapp.keystore\"|" pack.json
           sed -i "s/\"project\": \".*\"/\"project\": \"$PROJECT_NAME\"/" pack.json
           cat pack.json
-          ./HBuilderX/cli pack --config pack.json
+          PACK_OUTPUT=$(./HBuilderX/cli pack --config pack.json 2>&1)
+          echo "$PACK_OUTPUT"
+          if echo "$PACK_OUTPUT" | grep -q "user not login"; then
+            echo "::error::User not logged in, pack failed!"
+            exit 1
+          fi
+          echo "Checking generated APK files:"
+          find . -name "*.apk"
 
       - name: Upload APK to Artifacts
         uses: actions/upload-artifact@v4
