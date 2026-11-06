@@ -1,7 +1,7 @@
 {
   "project": "ywl-youjuapp",
   "name": "youjuAPP",
-  "appid": "",
+  "appid": "__UNI__CB17132",
   "type": "android",
   "platform": "android",
   "android": {
