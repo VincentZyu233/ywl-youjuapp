@@ -60,7 +60,8 @@ jobs:
           sed -i "s|\"certfile\": \".*\"|\"certfile\": \"$(pwd)/youjuapp.keystore\"|" pack.json
           sed -i "s/\"project\": \".*\"/\"project\": \"$PROJECT_NAME\"/" pack.json
           cat pack.json
-          PACK_OUTPUT=$(./HBuilderX/cli pack --config pack.json 2>&1)
+          # 使用 yes 自动应对多任务冲突时的交互式确认 "Do you continue to submit it? (y/n)"
+          PACK_OUTPUT=$(yes | ./HBuilderX/cli pack --config pack.json 2>&1)
           echo "$PACK_OUTPUT"
           if echo "$PACK_OUTPUT" | grep -q "user not login"; then
             echo "::error::User not logged in, pack failed!"
@@ -79,6 +80,11 @@ jobs:
 
           echo "Checking generated APK files:"
           find . -name "*.apk"
+
+          if [ ! -f "unpackage/release/apk/youjuAPP.apk" ]; then
+            echo "::error::No release APK file generated! Packaging failed or aborted."
+            exit 1
+          fi
 
       - name: Upload APK to Artifacts
         uses: actions/upload-artifact@v4
