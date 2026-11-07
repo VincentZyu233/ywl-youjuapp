@@ -17,3 +17,9 @@ Thumbs.db
 .flutter-plugins-dependencies
 .packages
 build/
+
+# Local Agent Configuration (private device IPs & paths)
+AGENT.local.md
+AGENT.local.*.md
+!AGENT.local.example.md
+

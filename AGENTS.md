@@ -1,97 +1,146 @@
 # AGENTS.md
 
-本文件为 AI 编码助手（Gemini、Claude Code、Codex 等）及协作者在本地运行、维护与二次开发 `youjuAPP` 的操作指引。
+本文件为 AI 编码助手（Gemini、Claude Code、Codex 等）及协作者在本地运行、维护、测试与二次开发 `youjuAPP` 的操作指引。
 
 ---
 
 ## 1. 项目概述
 
 `youjuAPP` 是一款面向光伏电站现场运维的**太阳能智能跟踪支架控制器（TCU - Tracker Control Unit）移动端蓝牙管理应用**。
-* **技术架构**：uni-app + Vue 3 模式开发，支持编译为 Android 原生应用（APK）以及 H5 Web 预览。
-* **核心业务**：
-  * BLE 蓝牙扫描与设备连接（`utils/ble.js`）。
-  * TCU 参数下发与广播（天文参数、组件排距/宽度、过流保护与夜返/清洗/避风保护角、东西限位角）。
-  * 12 键群控操作面板（自动、平置、急停、东/西点动、恶劣天气避险模式等）。
-  * 设备 RTC 实时时钟校准与固件版本读取。
+
+- **核心技术栈**：Flutter (Dart 3.x) + Android 原生 Kotlin (经典蓝牙 SPP 插件) + Material 3 现代工业工控设计规范。
+- **通信架构**：
+  - **经典蓝牙 SPP (主)**：基于 RFCOMM Socket（UUID: `00001101-0000-1000-8000-00805F9B34FB`），完美兼容下位机主流透传模块（JDY-31、HC-05）。
+  - **BLE GATT (辅)**：保留低功耗蓝牙扫描与通信底座，构成双模一体化服务。
+  - **协议闭环**：完全对齐官方《交接文档》，采用 `\r\n` (CRLF) 分帧解析下位机 JSON 遥测报文，支持 5 台 TCU 实时轮询监控与 10 项标准群控指令。
+- **调试设施**：内置滑出式「报文监控终端抽屉」，支持双向 Hex/ASCII 实时日志与清屏调试。
 
 ---
 
-## 2. 常用命令 (CLI)
+## 2. 本地专属配置与发现规范 (Local Config)
 
-本地开发环境推荐使用 Node.js（v18+ / v20+ / v22+），无需依赖图形界面即可在命令行启动 H5 本地预览：
+为了防止个人局域网 IP、本地私有开发路径与特定设备信息被误提交至公开 Git 仓库，本项目遵循以下本地配置发现规范：
 
-```bash
-# 启动本地 H5 开发预览服务器（默认端口 61102）
-npm run dev
-# 或
-npm run dev:h5
-
-# 临时指定其他端口运行
-npm run dev -- --port 8080
+```
+youjuAPP-flutter/
+├── AGENT.local.example.md    # [Git跟踪] 配置规范模板与格式说明
+├── AGENT.local.md            # [Git忽略] 本机实际生效的私有配置（由开发者/Agent维护）
+└── .gitignore                # 已配置忽略 AGENT.local.md
 ```
 
-> **环境依赖说明**：
-> 本地 CLI 运行基于 HBuilderX 内置的 uni-app Vite 编译内核（`uniapp-cli-vite`）。
-> `scripts/dev.js` 会自动检测常见路径（如 `D:\SSoftwareFiles\HBuiderX\...` 或 `C:\Program Files\HBuilderX`）。
-> 若 HBuilderX 安装在非默认目录，只需在环境中设置：
-> ```bash
-> $env:HX_APP_ROOT = "你的HBuilderX安装目录"
+### Agent 加载优先级策略
+1. **优先读取**：AI Agent 每次准备执行真机联调、截图、ADB 自动化或仿真时，首先检查根目录是否存在 [`AGENT.local.md`](AGENT.local.md)。
+2. **提取参数**：从 `AGENT.local.md` 中读取本地 ADB 路径、无线调试端点（IP:Port）、设备型号及物理分辨率。
+3. **回退兜底**：若 `AGENT.local.md` 不存在，读取 [`AGENT.local.example.md`](AGENT.local.example.md) 中的模板格式，并提示用户提供当前手机的局域网无线调试端点后在本地生成。
+
+---
+
+## 3. 无线 ADB 真机调试指引 (Wireless ADB Debugging)
+
+通过 Android 11+ 原生无线调试功能，无需物理 USB 连接线即可实现代码热重载、APK 静默安装、屏幕自动操控及实时日志抓取。
+
+### 3.1 连接与 Session 隔离避坑
+
+> [!WARNING]
+> 在多进程或沙箱式 Shell（如独立 PowerShell 会话）中，后台 ADB daemon 可能会在子进程结束后释放。
+> **铁律**：每次执行 ADB 子命令前，必须在同一行命令中先行执行 `connect` 确保处于活跃连接态：
+> ```powershell
+> $adb = "D:\SSoftwareFiles\scrcpy\scrcpy-win64-v3.3.3\adb.exe"
+> $device = "192.168.31.3:43001"
+> & $adb connect $device ; & $adb -s $device <子命令>
 > ```
 
----
+### 3.2 屏幕截图与画面采集规范
 
-## 3. 端口持久化方案说明
+> [!CAUTION]
+> 严禁在 PowerShell 下使用 `adb exec-out screencap -p > screen.png` 重定向！PowerShell 会将输出流转码为带有 BOM 的 UTF-16LE 文本，彻底损坏 PNG 图像二进制标头。
+> **正确做法**：在 Android 手机本地生成图片后再回拉：
+> ```powershell
+> & $adb -s $device shell screencap -p /sdcard/screen.png
+> & $adb -s $device pull /sdcard/screen.png "D:\temp\gemini\ywl-youjuapp\screen.png"
+> ```
 
-本项目将开发服务器默认端口从 Vite 默认的 `5173` 改为 **`61102`**，持久化机制如下：
+### 3.3 触控自动化与分辨率适配
 
-1. **`manifest.json`（DCloud 官方标准规范）**：
-   在 `manifest.json` 中配置了：
-   ```json
-   "h5": {
-     "title": "蓝牙设备管理",
-     "devServer": {
-       "port": 61102,
-       "disableHostCheck": true
-     }
-   }
-   ```
-   无论是 HBuilderX 界面点击运行还是底层 Vite CLI 构建，编译器都会首选加载并持久化此端口。
-2. **`scripts/dev.js`（CLI 跨平台启动器）**：
-   默认兜底指定 `--port 61102`，同时也支持通过命令行参数（如 `--port 8080`）或环境变量临时覆盖。
-
----
-
-## 4. 目录结构与规范
-
-```
-youjuAPP/
-├── pages/
-│   ├── index/index.vue       # 蓝牙设备扫描与列表页
-│   └── device/index.vue      # 设备详情页（信息/参数设置/广播/群控）
-├── components/
-│   ├── device-card.vue       # 设备卡片组件
-│   ├── setting-card.vue      # 参数设置卡片组件
-│   ├── control-button.vue    # 群控按钮组件
-│   └── bottom-nav.vue        # 底部导航组件
-├── utils/
-│   ├── ble.js                # BLE 蓝牙适配与数据通信封装
-│   └── storage.js            # 本地缓存封装
-├── scripts/
-│   └── dev.js                # 跨平台一键 CLI 启动器
-├── unpackage/res/icons/      # App 原生图标资源
-├── manifest.json             # 应用配置（权限/版本/模块/H5端口）
-├── pages.json                # 页面路由与窗口外观
-├── vite.config.js            # Vite 配置（含持久化端口 61102）
-└── index.html                # H5 运行入口模板
-```
-
----
-
-## 5. 打包与发布
-
-* **Android APK 原生包**：
-  使用 HBuilderX 打开本项目根目录，点击菜单 `发行` -> `原生 App-云打包` 或 `运行到手机或模拟器` 制作 Android APK。
-* **H5 生产构建**：
-  ```bash
-  npx uni build -p h5
+- **物理分辨率确认**：不同真机屏幕比例差异较大（如 vivo iQOO V2307A 物理分辨率为 **`1260 x 2800`**，而非传统 1080p）。
+- **获取物理分辨率**：
+  ```powershell
+  & $adb -s $device shell wm size
   ```
+- **核心操作命令**：
+  ```powershell
+  # 点击指定坐标
+  & $adb -s $device shell input tap <X> <Y>
+  
+  # 滑动（从 X1,Y1 滑至 X2,Y2，耗时 ms）
+  & $adb -s $device shell input swipe 630 2000 630 800 300
+  
+  # 输入纯英文字符串
+  & $adb -s $device shell input text "JDY-31"
+  
+  # 常用按键事件：4=返回键, 66=回车键, 67=删除键, 123=移动光标到行尾
+  & $adb -s $device shell input keyevent 4
+  ```
+
+### 3.4 APK 一键编译与真机推送安装
+
+最新 Release APK 统一输出在 [`download/v2.1.1/youjuAPP_v2.1.1.apk`](download/v2.1.1/youjuAPP_v2.1.1.apk)。本地推送覆盖安装命令：
+
+```powershell
+# 1. 覆盖安装应用 (-r 保持数据)
+& $adb -s $device install -r "D:\aaaStuffsaaa\from_git\gitee\ywl-youjuapp\youjuAPP-flutter\download\v2.1.1\youjuAPP_v2.1.1.apk"
+
+# 2. 唤醒并冷启动应用主页面
+& $adb -s $device shell am start -n "com.youju.tcuapp/com.youju.tcuapp.MainActivity"
+```
+
+### 3.5 实时日志捕获与经典蓝牙排查
+
+排查蓝牙广播、SPP Socket 建立、JSON 遥测解析及 Flutter 渲染异常时：
+
+```powershell
+# 清空历史缓冲区
+& $adb -s $device logcat -c
+
+# 过滤 Flutter 框架日志与原生蓝牙插件日志
+& $adb -s $device logcat -s Flutter:V BluetoothSppPlugin:V *:S
+```
+
+---
+
+## 4. 下位机仿真测试指南
+
+当现场缺少物理光伏支架和 TCU 单片机硬件时，可通过本地仿真套件完成 100% 协议与界面闭环测试：
+
+- **联调文档**：[`docs/20261107调试文档/经典蓝牙SPP与下位机NCU本地联调测试指南.md`](docs/20261107调试文档/经典蓝牙SPP与下位机NCU本地联调测试指南.md)
+- **仿真脚本**：[`docs/20261107调试文档/mock_ncu_server.py`](docs/20261107调试文档/mock_ncu_server.py)
+  - **模式 A (硬件串口直连)**：电脑插入 CH340 USB 转 TTL + JDY-31 经典蓝牙模块，运行脚本后手机端直接扫描连接蓝牙从机。
+  - **模式 B (0元副手机/平板)**：副手机安装 SPP 蓝牙串口调试助手运行仿真逻辑。
+
+---
+
+## 5. 项目工程结构
+
+```
+youjuAPP-flutter/
+├── android/                  # Android 原生平台源码与签名配置
+│   ├── app/src/main/kotlin/  # Kotlin 核心实现
+│   │   └── com/youju/tcuapp/
+│   │       ├── MainActivity.kt
+│   │       └── BluetoothSppPlugin.kt  # 原生经典蓝牙 SPP 插件 (RFCOMM)
+│   └── app/youjuapp.keystore # 永久私有发布签名证书
+├── lib/                      # Flutter 跨平台源码
+│   ├── models/               # 数据模型 (ncu_protocol.dart 官方协议对象)
+│   ├── providers/            # 状态管理 (BleProvider, TcuControllerProvider)
+│   ├── services/             # 通信服务 (UnifiedBluetoothService, ClassicSppService)
+│   ├── theme/                # Material 3 工业设计主题 (app_theme.dart)
+│   └── views/                # 页面组件
+│       ├── home/             # 首页（蓝牙设备列表、连接状态卡片）
+│       └── device/           # 控制中心（信息/参数/广播/群控 Tab + 报文终端抽屉）
+├── docs/                     # 协议与联调文档
+├── download/                 # 编译归档 Release APK (v2.0.0, v2.1.0, v2.1.1)
+├── CHANGELOG.md              # 语义化版本演进日志
+├── README.md                 # 项目主索引与文档导航
+├── AGENT.local.example.md    # 本地调试配置模板
+└── AGENT.local.md            # [本地私有] 开发者私有无线调试配置 (已忽略)
+```
