@@ -2,18 +2,19 @@
 
 [![GitHub](https://img.shields.io/badge/GitHub-VincentZyu233%2Fywl--youjuapp-181717?logo=github)](https://github.com/VincentZyu233/ywl-youjuapp)
 [![Gitee](https://img.shields.io/badge/Gitee-vincent--zyu%2Fywl--youjuapp-C71D23?logo=gitee)](https://gitee.com/vincent-zyu/ywl-youjuapp)
-[![Latest Release](https://img.shields.io/badge/Release-v2.1.1-blue.svg)](download/v2.1.1/youjuAPP_v2.1.1.apk)
+[![Latest Release](https://img.shields.io/badge/Release-v2.1.2-blue.svg)](download/v2.1.2/youjuAPP_v2.1.2.apk)
 
 太阳能智能跟踪支架控制器（TCU）移动端蓝牙管理应用。
 
+<p align="center"><img src="assets/images/logo.png" width="128" alt="App Logo" /></p>
 <p align="center"><img src="docs/images/preview/preview.jpg" width="320" alt="App Preview" /></p>
 
 ---
 
 ## 🚀 快速下载与安装
 
-- **当前最新稳定版**：`v2.1.1` (Build `2110`)
-- **APK 直接下载**：👉 [**youjuAPP_v2.1.1.apk (53.9 MB)**](download/v2.1.1/youjuAPP_v2.1.1.apk)
+- **当前最新稳定版**：`v2.1.2` (Build `2120`)
+- **APK 直接下载**：👉 [**youjuAPP_v2.1.2.apk (待构建产物归档)**](download/v2.1.2/youjuAPP_v2.1.2.apk) \| [**youjuAPP_v2.1.1.apk (已构建验证版)**](download/v2.1.1/youjuAPP_v2.1.1.apk)
 - **全部版本更新记录**：👉 [**查看详细更新日志 (CHANGELOG.md)**](CHANGELOG.md)
 
 ---

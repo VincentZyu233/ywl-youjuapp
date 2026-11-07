@@ -38,35 +38,38 @@ jobs:
 
       - name: Build Android Release APK
         run: |
-          echo "Building signed Release APK with version 2.1.1+2110..."
-          flutter build apk --release --build-name=2.1.1 --build-number=2110
+          VERSION=$(grep '^version:' pubspec.yaml | sed 's/version: //g' | cut -d'+' -f1 | tr -d ' \r\n')
+          BUILD_NUM=$(grep '^version:' pubspec.yaml | sed 's/version: //g' | cut -d'+' -f2 | tr -d ' \r\n')
+          echo "Building signed Release APK with version $VERSION+$BUILD_NUM..."
+          flutter build apk --release --build-name="$VERSION" --build-number="$BUILD_NUM"
           
           mkdir -p release_out
-          cp build/app/outputs/flutter-apk/app-release.apk release_out/youjuAPP_v2.1.1.apk
+          cp build/app/outputs/flutter-apk/app-release.apk "release_out/youjuAPP_v${VERSION}.apk"
           echo "Release APK generated successfully:"
-          ls -lh release_out/youjuAPP_v2.1.1.apk
+          ls -lh "release_out/youjuAPP_v${VERSION}.apk"
+          echo "APP_VERSION=$VERSION" >> $GITHUB_ENV
 
       - name: Upload APK to Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: youjuAPP-flutter-v2.1.1
-          path: release_out/youjuAPP_v2.1.1.apk
+          name: youjuAPP-flutter-${{ env.APP_VERSION }}
+          path: release_out/youjuAPP_v*.apk
           if-no-files-found: error
 
-      - name: Create or Update GitHub Release v2.1.1
+      - name: Create or Update GitHub Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          TAG="v2.1.1"
-          RELEASE_TITLE="youjuAPP Flutter 2.1.1 Release (系统蓝牙开启授权与Tab动效打磨)"
-          RELEASE_NOTES="youjuAPP 2.1.1 体验优化与交互修复：\n1. 修复手机未开蓝牙时直接显示正在搜索的问题，新增原生系统开启蓝牙授权弹窗（ACTION_REQUEST_ENABLE）与前置状态拦截\n2. 彻底修复底部 4 个导航 Tab 切换时出现的灰色圆角矩形残留与闪烁问题，改为纯净平滑的 Material 3 胶囊指示动效\n3. 优化双模蓝牙扫描链路与生命周期管理"
+          TAG="v${{ env.APP_VERSION }}"
+          RELEASE_TITLE="youjuAPP Flutter ${{ env.APP_VERSION }} Release"
+          RELEASE_NOTES="youjuAPP ${{ env.APP_VERSION }} 发布：\n1. 恢复原版 uni-app 高清蓝牙遥控器 Logo 图标（含 mipmap 全规格与圆形图标规范）\n2. 全局 ThemeData 屏蔽水波纹与点击灰色遮罩（NoSplash 与透明高亮），确保 Tab 切换纯净无残影\n3. 支持经典蓝牙 SPP 与下位机 NCU/TCU 协议闭环"
 
           if gh release view "$TAG" -R ${{ github.repository }} >/dev/null 2>&1; then
             echo "Release $TAG exists, updating assets..."
-            gh release upload "$TAG" release_out/youjuAPP_v2.1.1.apk --clobber -R ${{ github.repository }}
+            gh release upload "$TAG" release_out/youjuAPP_v${{ env.APP_VERSION }}.apk --clobber -R ${{ github.repository }}
           else
             echo "Creating new release $TAG..."
-            gh release create "$TAG" release_out/youjuAPP_v2.1.1.apk \
+            gh release create "$TAG" release_out/youjuAPP_v${{ env.APP_VERSION }}.apk \
               --title "$RELEASE_TITLE" \
               --notes "$RELEASE_NOTES" \
               -R ${{ github.repository }}

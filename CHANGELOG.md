@@ -4,7 +4,22 @@
 
 ---
 
-## [[v2.1.1](download/v2.1.1/youjuAPP_v2.1.1.apk)] - 2026-11-07 (当前最新稳定版)
+## [[v2.1.2](download/v2.1.2/youjuAPP_v2.1.2.apk)] - 2026-11-07 (当前最新稳定版)
+
+### 品牌标识与视觉 (Branding & Icons)
+- **恢复原版 uni-app 专属高清 Logo**：
+  - 从历史提交完整提取并部署官方设计图标（深蓝圆形底座 + 蓝牙符文 + 遥控器手柄图案）；
+  - 覆盖 Android 原生全套 mipmap 分辨率（mdpi 48px, hdpi 72px, xhdpi 96px, xxhdpi 144px, xxxhdpi 192px）；
+  - 补充 `ic_launcher_round.png` 与 AndroidManifest `android:roundIcon` 配置，完美适配 OriginOS 等现代 Android 圆形图标桌面规范；
+  - 归档 1024x1024 矢量母版至 `assets/images/logo.png`。
+
+### 交互防御加固 (Interaction Reinforcement)
+- **全局 Theme 彻底屏蔽水波纹残留**：在 `AppTheme` 中全局注入 `splashFactory: NoSplash.splashFactory`、`highlightColor: Colors.transparent`、`splashColor: Colors.transparent`，杜绝任何组件在触控/长按/鼠标点击时产生系统半透明灰色遮罩与焦点残留。
+- **CI/CD 流水线动态版本化**：自动从 `pubspec.yaml` 解析版本与构建号，自动生成对应的 Release APK 与 GitHub Release 标签。
+
+---
+
+## [[v2.1.1](download/v2.1.1/youjuAPP_v2.1.1.apk)] - 2026-11-07
 
 ### 修复与优化 (Fixes & Improvements)
 - **蓝牙未开启拦截与系统原生授权弹窗**：在手机物理蓝牙未开启时，点击“开始搜索”前置拦截虚假扫描状态，调用 Android 系统原生 `ACTION_REQUEST_ENABLE` 弹窗引导用户开启蓝牙。

@@ -2,7 +2,7 @@ name: youjuapp
 description: "youju TCU Control Application in Flutter"
 publish_to: 'none'
 
-version: 2.1.1+2110
+version: 2.1.2+2120
 
 environment:
   sdk: ">=3.3.0 <4.0.0"
@@ -26,4 +26,5 @@ dev_dependencies:
 flutter:
   uses-material-design: true
   assets:
+    - assets/images/logo.png
     - static/svg/
